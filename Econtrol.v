@@ -3,9 +3,9 @@
 // Company: 
 // Engineer: 
 // 
-// Create Date:    11:26:09 10/29/2024 
+// Create Date:    18:02:30 11/07/2024 
 // Design Name: 
-// Module Name:    control 
+// Module Name:    Econtrol 
 // Project Name: 
 // Target Devices: 
 // Tool versions: 
@@ -18,19 +18,14 @@
 // Additional Comments: 
 //
 //////////////////////////////////////////////////////////////////////////////////
-module control(
+module Econtrol(
     input [5:0] OpCode,
     input [5:0] Funct,
-    output RegDst,
     output ALUSrc,
-    output MemtoReg,
-    output RegWrite,
-    output MemWrite,
-    output [1:0] nPC_sel,
-    output ExtOp,
-    output PCtoReg,
-    output Regra,
-    output [4:0] ALUctr
+    output [4:0] ALUctr,
+    output [3:0] rsTuse,
+    output [3:0] rtTuse,
+    output [3:0] Tnew
     );
     
     parameter ADD = 5'b00000,
@@ -45,7 +40,8 @@ module control(
               BNE = 5'b01001,
               J = 5'b01010,
               AND = 5'b01011,
-              OR = 5'b01100;
+              OR = 5'b01100,
+              NEWB = 5'b01101;
     
     wire add;
     wire sub;
@@ -60,6 +56,7 @@ module control(
     wire j;
     wire andf;
     wire orf;
+    wire newb;
     
               
 assign add = (OpCode == 6'b000000 && Funct == 6'b100000) ? 1'b1 : 1'b0;
@@ -75,18 +72,9 @@ assign bne = (OpCode == 6'b000101) ? 1'b1 : 1'b0;
 assign j = (OpCode == 6'b000010) ? 1'b1 : 1'b0;
 assign andf = (OpCode == 6'b000000 && Funct == 6'b100100) ? 1'b1 : 1'b0;
 assign orf = (OpCode == 6'b000000 && Funct == 6'b100101) ? 1'b1 : 1'b0;
+// assign newb 
 
-assign RegDst = (add | sub | andf | orf) ? 1'b1 : 1'b0;
 assign ALUSrc = (ori | lw | sw | lui) ? 1'b1 : 1'b0;
-assign MemtoReg = (lw) ? 1'b1 : 1'b0;
-assign RegWrite = (add | sub | ori | lw | lui | jal | andf | orf) ? 1'b1 : 1'b0;
-assign MemWrite = (sw) ? 1'b1 : 1'b0;
-assign nPC_sel = (beq | bne) ? 2'b01 :
-                 (jal | j) ? 2'b10 :
-                 (jr) ? 2'b11 : 2'b00;
-assign ExtOp = (lw | sw) ? 1'b1 : 1'b0;
-assign PCtoReg = (jal) ? 1'b1 : 1'b0;
-assign Regra = (jal) ? 1'b1 : 1'b0;
 assign ALUctr = (add) ? ADD :
                 (sub) ? SUB :
                 (ori) ? ORI :
@@ -99,6 +87,52 @@ assign ALUctr = (add) ? ADD :
                 (bne) ? BNE :
                 (j) ? J :
                 (andf) ? AND :
-                (orf) ? OR : 5'b11111;
+                (orf) ? OR : 
+                (newb) ? NEWB : 5'b11111;
 
+assign rsTuse = (add) ? 4'h1 :
+                (sub) ? 4'h1 :
+                (ori) ? 4'h1 :
+                (lw) ? 4'h1 :
+                (sw) ? 4'h1 :
+                (beq) ? 4'h0 :
+                (lui) ? 4'hf :
+                (jal) ? 4'hf :
+                (jr) ? 4'h0 :
+                (bne) ? 4'h0 :
+                (j) ? 4'hf :
+                (andf) ? 4'h1 :
+                (orf) ? 4'h1 : 
+                (newb) ? 4'hf : 4'hf;
+                
+assign rtTuse = (add) ? 4'h1 :
+                (sub) ? 4'h1 :
+                (ori) ? 4'hf :
+                (lw) ? 4'hf :
+                (sw) ? 4'h2 :
+                (beq) ? 4'h0 :
+                (lui) ? 4'hf :
+                (jal) ? 4'hf :
+                (jr) ? 4'hf :
+                (bne) ? 4'h0 :
+                (j) ? 4'hf :
+                (andf) ? 4'h1 :
+                (orf) ? 4'h1 : 
+                (newb) ? 4'hf : 4'hf;
+
+assign Tnew = (add) ? 4'h1 :
+              (sub) ? 4'h1 :
+              (ori) ? 4'h1 :
+              (lw) ? 4'h2 :
+              (sw) ? 4'hf :
+              (beq) ? 4'hf :
+              (lui) ? 4'h1 :
+              (jal) ? 4'h0 :
+              (jr) ? 4'hf :
+              (bne) ? 4'hf :
+              (j) ? 4'hf :
+              (andf) ? 4'h1 :
+              (orf) ? 4'h1 : 
+              (newb) ? 4'hf : 4'hf;
+                
 endmodule

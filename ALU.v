@@ -22,8 +22,7 @@ module ALU(
     input [31:0] inputA,
     input [31:0] inputB,
     input [4:0] type,
-    output [31:0] outputA,
-    output zero
+    output [31:0] outputA
     );
     
     parameter ADD = 5'b00000,
@@ -38,7 +37,8 @@ module ALU(
               BNE = 5'b01001,
               J = 5'b01010,
               AND = 5'b01011,
-              OR = 5'b01100;
+              OR = 5'b01100,
+              NEWB = 5'b01101;
               
     wire [31:0] adduAB;
     wire [31:0] subuAB;
@@ -66,12 +66,7 @@ assign outputA = (type == ADD) ? adduAB :
                  (type == BNE) ? none :
                  (type == J) ? none :
                  (type == AND) ? andAB :
-                 (type == OR) ? orAB : none;
-                
-assign zero = ((type == BEQ) && (inputA == inputB)) ? 1'b1 :
-              ((type == BNE) && (inputA != inputB)) ? 1'b1 :
-              (type == JAL) ? 1'b1 :
-              (type == JR) ? 1'b1 :
-              (type == J) ? 1'b1 : 1'b0;
+                 (type == OR) ? orAB : 
+                 (type == NEWB) ? none : none;
 
 endmodule

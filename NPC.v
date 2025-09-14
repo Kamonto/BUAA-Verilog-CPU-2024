@@ -25,7 +25,7 @@ module NPC(
     input [15:0] imm16,
     input [25:0] imm26,
     input [31:0] GRF,
-    output [31:0] PCplus4,
+    output [31:0] PCplus8,
     output [31:0] NPC
     );
     
@@ -42,11 +42,11 @@ module NPC(
 
 assign sign_ext = ({{16{imm16[15]}}, imm16} << 2);
 assign NPC_PCplus4 = PC + 32'h00000004;
-assign NPC_imm16 = PC + 32'h00000004 + sign_ext;
+assign NPC_imm16 = PC + sign_ext;
 assign NPC_imm26 = {PC[31:28], imm26, 2'b00};
 assign NPC_GRF = GRF;
 
-assign PCplus4 = PC + 32'h00000004;
+assign PCplus8 = PC + 32'h00000008;
 assign NPC = (nPC_sel == PCPLUS4) ? NPC_PCplus4 :
              (nPC_sel == IMM16 && zero) ? NPC_imm16 :
              (nPC_sel == IMM26 && zero) ? NPC_imm26 :

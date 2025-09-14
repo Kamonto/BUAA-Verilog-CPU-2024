@@ -20,6 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 module PC(
     input clk,
+    input en,
     input reset,
     input [31:0] inputPC,
     output [31:0] outputPC
@@ -32,7 +33,9 @@ always@(posedge clk) begin
         PC <= 32'h00000000;
     end
     else begin
-        PC <= (inputPC ^ 32'h00003000);
+        if (en) begin
+            PC <= (inputPC ^ 32'h00003000);
+        end
     end
 end
 

@@ -45,7 +45,8 @@ always@(posedge clk) begin
     else begin
         if (WE) begin
             RAM[RAM_addr] <= WD;
-            $display("@%h: *%h <= %h", PC, addr, WD);
+            $display("%d@%h: *%h <= %h", $time, PC, addr, WD);
+            //$display("@%h: *%h <= %h", PC, addr, WD);
         end
     end
 end

@@ -45,7 +45,8 @@ always@(posedge clk) begin
         if (WE) begin
             if (A3 != 5'b00000) begin
                 GRF[A3] <= WD;
-                $display("@%h: $%d <= %h", PC, A3, WD);
+                $display("%d@%h: $%d <= %h", $time, PC, A3, WD);
+                //$display("@%h: $%d <= %h", PC, A3, WD);
             end
         end
     end
