@@ -21,21 +21,23 @@
 module BE(
     input [31:0] addr,
     input [31:0] data,
-    input [4:0] type,
+    input [5:0] type,
+    input Req,
     output [3:0] byteen,
     output [31:0] fixed_data
     );
     
-    parameter SW = 5'b00100,
-              SH = 5'b10100,
-              SB = 5'b10011,
-              NEWB = 5'b11101;
+    parameter SW = 6'b000100,
+              SH = 6'b010100,
+              SB = 6'b010011,
+              NEWB = 6'b100001;
 
     wire [1:0] addr_tail;
     
 assign addr_tail = addr[1:0];
     
-assign byteen = (type == SW) ? 4'b1111 :
+assign byteen = (Req) ? 4'b0000 :
+                (type == SW) ? 4'b1111 :
                 (type == SH && addr_tail[1] == 1'b0) ? 4'b0011 : 
                 (type == SH && addr_tail[1] == 1'b1) ? 4'b1100 : 
                 (type == SB && addr_tail == 2'b00) ? 4'b0001 : 

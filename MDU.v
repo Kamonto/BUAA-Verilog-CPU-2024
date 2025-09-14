@@ -23,8 +23,9 @@ module MDU(
     input reset,
     input [31:0] inputA,
     input [31:0] inputB,
-    input [4:0] type,
+    input [5:0] type,
     input start,
+    input Req,
     output [31:0] outputA,
     output busy
     );
@@ -35,16 +36,16 @@ module MDU(
     reg [3:0] max_round;
     reg busy_reg;
     
-    parameter MULT = 5'b10101,
-              MULTU = 5'b10110,
-              DIV = 5'b10111,
-              DIVU = 5'b11000,
-              MFHI = 5'b11001,
-              MFLO = 5'b11010,
-              MTHI = 5'b11011,
-              MTLO = 5'b11100,
-              NEWB = 5'b11101;
-
+    parameter MULT = 6'b010101,
+              MULTU = 6'b010110,
+              DIV = 6'b010111,
+              DIVU = 6'b011000,
+              MFHI = 6'b011001,
+              MFLO = 6'b011010,
+              MTHI = 6'b011011,
+              MTLO = 6'b011100,
+              NEWB = 6'b100001;
+              
 always@(posedge clk) begin
     if (reset) begin
         HI <= 32'h00000000;
@@ -53,7 +54,7 @@ always@(posedge clk) begin
         max_round <= 4'h0;
         busy_reg <= 1'b0;
     end
-    else begin
+    else if (~Req) begin
         if (type == MTHI) begin
             HI <= inputA;
         end

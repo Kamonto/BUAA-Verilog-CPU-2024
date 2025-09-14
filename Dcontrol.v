@@ -21,46 +21,52 @@
 module Dcontrol(
     input [5:0] OpCode,
     input [5:0] Funct,
+    input [4:0] rs,
     output RegDst,
     output [1:0] nPC_sel,
     output ExtOp,
     output Regra,
-    output [4:0] ALUctr,
+    output [5:0] ALUctr,
     output [3:0] rsTuse,
     output [3:0] rtTuse,
-    output [3:0] Tnew
+    output [3:0] Tnew,
+    output [4:0] ExcCode
     );
     
-    parameter ADD = 5'b00000,
-              SUB = 5'b00001,
-              ORI = 5'b00010,
-              LW = 5'b00011,
-              SW = 5'b00100,
-              BEQ = 5'b00101,
-              LUI = 5'b00110,
-              JAL = 5'b00111,
-              JR = 5'b01000,
-              BNE = 5'b01001,
-              J = 5'b01010,
-              AND = 5'b01011,
-              OR = 5'b01100,
-              SLT = 5'b01101,
-              SLTU = 5'b01110,
-              ADDI = 5'b01111,
-              ANDI = 5'b10000,
-              LB = 5'b10001,
-              LH = 5'b10010,
-              SB = 5'b10011,
-              SH = 5'b10100,
-              MULT = 5'b10101,
-              MULTU = 5'b10110,
-              DIV = 5'b10111,
-              DIVU = 5'b11000,
-              MFHI = 5'b11001,
-              MFLO = 5'b11010,
-              MTHI = 5'b11011,
-              MTLO = 5'b11100,
-              NEWB = 5'b11101;
+    parameter ADD = 6'b000000,
+              SUB = 6'b000001,
+              ORI = 6'b000010,
+              LW = 6'b000011,
+              SW = 6'b000100,
+              BEQ = 6'b000101,
+              LUI = 6'b000110,
+              JAL = 6'b000111,
+              JR = 6'b001000,
+              BNE = 6'b001001,
+              J = 6'b001010,
+              AND = 6'b001011,
+              OR = 6'b001100,
+              SLT = 6'b001101,
+              SLTU = 6'b001110,
+              ADDI = 6'b001111,
+              ANDI = 6'b010000,
+              LB = 6'b010001,
+              LH = 6'b010010,
+              SB = 6'b010011,
+              SH = 6'b010100,
+              MULT = 6'b010101,
+              MULTU = 6'b010110,
+              DIV = 6'b010111,
+              DIVU = 6'b011000,
+              MFHI = 6'b011001,
+              MFLO = 6'b011010,
+              MTHI = 6'b011011,
+              MTLO = 6'b011100,
+              MFCZ = 6'b011101,
+              MTCZ = 6'b011110,
+              SYS = 6'b011111,
+              ERET = 6'b100000,
+              NEWB = 6'b100001;
     
     wire add;
     wire sub;
@@ -91,6 +97,11 @@ module Dcontrol(
     wire mflo;
     wire mthi;
     wire mtlo;
+    wire mfcz;
+    wire mtcz;
+    wire sys;
+    wire eret;
+    wire nop;
     wire newb;
     
               
@@ -123,6 +134,11 @@ assign mfhi = (OpCode == 6'b000000 && Funct == 6'b010000) ? 1'b1 : 1'b0;
 assign mflo = (OpCode == 6'b000000 && Funct == 6'b010010) ? 1'b1 : 1'b0;
 assign mthi = (OpCode == 6'b000000 && Funct == 6'b010001) ? 1'b1 : 1'b0;
 assign mtlo = (OpCode == 6'b000000 && Funct == 6'b010011) ? 1'b1 : 1'b0;
+assign mfcz = (OpCode == 6'b010000 && rs == 5'b00000) ? 1'b1 : 1'b0;
+assign mtcz = (OpCode == 6'b010000 && rs == 5'b00100) ? 1'b1 : 1'b0;
+assign sys = (OpCode == 6'b000000 && Funct == 6'b001100) ? 1'b1 : 1'b0;
+assign eret = (OpCode == 6'b010000 && Funct == 6'b011000) ? 1'b1 : 1'b0;
+assign nop = (OpCode == 6'b000000 && Funct == 6'b000000) ? 1'b1 : 1'b0;
 // assign newb
 
 assign RegDst = (add | sub | andf | orf | slt | sltu | mfhi | mflo) ? 1'b1 : 1'b0;
@@ -160,7 +176,12 @@ assign ALUctr = (add) ? ADD :
                 (mflo) ? MFLO :
                 (mthi) ? MTHI :
                 (mtlo) ? MTLO :
-                (newb) ? NEWB : 5'b11111;
+                (mfcz) ? MFCZ :
+                (mtcz) ? MTCZ :
+                (sys) ? SYS :
+                (eret) ? ERET :
+                // (newb) ? NEWB : 
+                6'b111111;
                 
 assign rsTuse = (add) ? 4'h1 :
                 (sub) ? 4'h1 :
@@ -191,6 +212,10 @@ assign rsTuse = (add) ? 4'h1 :
                 (mflo) ? 4'hf :
                 (mthi) ? 4'h1 :
                 (mtlo) ? 4'h1 :
+                (mfcz) ? 4'hf :
+                (mtcz) ? 4'hf :
+                (sys) ? 4'hf :
+                (eret) ? 4'hf :
                 (newb) ? 4'hf : 4'hf;
                 
 assign rtTuse = (add) ? 4'h1 :
@@ -222,6 +247,10 @@ assign rtTuse = (add) ? 4'h1 :
                 (mflo) ? 4'hf :
                 (mthi) ? 4'hf :
                 (mtlo) ? 4'hf :
+                (mfcz) ? 4'hf :
+                (mtcz) ? 4'h2 :
+                (sys) ? 4'hf :
+                (eret) ? 4'hf :
                 (newb) ? 4'hf : 4'hf;
 
 assign Tnew = (add) ? 4'h2 :
@@ -253,6 +282,14 @@ assign Tnew = (add) ? 4'h2 :
               (mflo) ? 4'h2 :
               (mthi) ? 4'hf :
               (mtlo) ? 4'hf :
+              (mfcz) ? 4'h3 :
+              (mtcz) ? 4'hf :
+              (sys) ? 4'hf :
+              (eret) ? 4'hf :
               (newb) ? 4'hf : 4'hf;
-                
+
+assign ExcCode = sys ? 5'b01000 : 
+                 (~nop && ALUctr == 6'b111111) ? 5'b01010 : 5'b00000;
+// newb
+
 endmodule

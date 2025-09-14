@@ -21,14 +21,14 @@
 module DE(
     input [31:0] addr,
     input [31:0] data,
-    input [4:0] type,
+    input [5:0] type,
     output [31:0] fixed_data
     );
     
-    parameter LW = 5'b00011,
-              LH = 5'b10010,
-              LB = 5'b10001,
-              NEWB = 5'b11101;
+    parameter LW = 6'b000011,
+              LH = 6'b010010,
+              LB = 6'b010001,
+              NEWB = 6'b100001;
 
     wire [1:0] addr_tail;
     wire [15:0] half_data;
