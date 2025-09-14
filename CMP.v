@@ -39,7 +39,23 @@ module CMP(
               J = 5'b01010,
               AND = 5'b01011,
               OR = 5'b01100,
-              NEWB = 5'b01101;
+              SLT = 5'b01101,
+              SLTU = 5'b01110,
+              ADDI = 5'b01111,
+              ANDI = 5'b10000,
+              LB = 5'b10001,
+              LH = 5'b10010,
+              SB = 5'b10011,
+              SH = 5'b10100,
+              MULT = 5'b10101,
+              MULTU = 5'b10110,
+              DIV = 5'b10111,
+              DIVU = 5'b11000,
+              MFHI = 5'b11001,
+              MFLO = 5'b11010,
+              MTHI = 5'b11011,
+              MTLO = 5'b11100,
+              NEWB = 5'b11101;
 
 assign D_zero = ((D_type == BEQ) && (D_fixedRD1 == D_fixedRD2)) ? 1'b1 :
                 ((D_type == BNE) && (D_fixedRD1 != D_fixedRD2)) ? 1'b1 :

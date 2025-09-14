@@ -20,7 +20,18 @@
 //////////////////////////////////////////////////////////////////////////////////
 module mips(
     input clk,
-    input reset
+    input reset,
+    input [31:0] i_inst_rdata,
+    input [31:0] m_data_rdata,
+    output [31:0] i_inst_addr,
+    output [31:0] m_data_addr,
+    output [31:0] m_data_wdata,
+    output [3 :0] m_data_byteen,
+    output [31:0] m_inst_addr,
+    output w_grf_we,
+    output [4:0] w_grf_addr,
+    output [31:0] w_grf_wdata,
+    output [31:0] w_inst_addr
     );
     
     // F zone ////////////////////////////////
@@ -80,6 +91,7 @@ module mips(
     wire [25:0] D_imm26;
     wire FD_en;
     wire FD_clear;
+    wire D_ismult;
     
     // temp
     wire [31:0] D_temp32;
@@ -89,6 +101,8 @@ module mips(
     // E zone ////////////////////////////////
     // E control
     wire E_ALUSrc;
+    wire E_start;
+    wire E_mffix;
     wire [4:0] E_ALUctr;
     wire [3:0] E_rsTuse;
     wire [3:0] E_rtTuse;
@@ -101,10 +115,15 @@ module mips(
     wire [31:0] E_fixedRD2;
     wire [31:0] E_inputA;
     wire [31:0] E_inputB;
-    wire [31:0] E_outputA;
+    wire [31:0] E_ALUoutputA;
     // wire E_zero;
     
+    // MDU
+    wire [31:0] E_MDUoutputA;
+    wire E_busy;
+    
     // others
+    wire [31:0] E_fixedoutputA;
     wire [31:0] E_ext32;
     wire [4:0] E_A3;
     wire [31:0] E_PCplus8;
@@ -128,7 +147,7 @@ module mips(
     
     // M zone ////////////////////////////////
     // M control
-    wire M_MemWrite;
+    // wire M_MemWrite;
     wire [4:0] M_ALUctr;
     wire [3:0] M_rsTuse;
     wire [3:0] M_rtTuse;
@@ -229,7 +248,7 @@ module mips(
     PC PC (.clk(clk), .en(pc_en), .reset(reset), .inputPC(F_npc), .outputPC(F_pc));
     NPC NPC (.PC(F_pc), .nPC_sel(D_nPC_sel), .zero(D_zero), .imm16(D_imm16), 
              .imm26(D_imm26), .GRF(D_fixedRD1), .PCplus8(F_PCplus8), .NPC(F_npc));
-    IM IM (.addr(F_pc), .data(F_Instr));
+    // IM IM (.addr(F_pc), .data(F_Instr));
     
     FDreg FDreg (.clk(clk), .en(FD_en), .reset(reset), .F_Instr(F_fixedInstr), 
                  .F_PCplus8(F_PCplus8), .D_Instr(D_Instr), .D_PCplus8(D_PCplus8), 
@@ -254,11 +273,13 @@ module mips(
                  .D_temp32(D_temp32), .D_temp5(D_temp5), .D_temp1(D_temp1), .E_temp32(D_temp32), .E_temp5(D_temp5), .E_temp1(E_temp1));
 
     // E zone ////////////////////////////////
-    Econtrol Econtrol (.OpCode(E_OpCode), .Funct(E_Funct), .ALUSrc(E_ALUSrc), .ALUctr(E_ALUctr), 
-                       .rsTuse(E_rsTuse), .rtTuse(E_rtTuse), .Tnew(E_Tnew));
-    ALU ALU (.inputA(E_inputA), .inputB(E_inputB), .type(E_ALUctr), .outputA(E_outputA));
+    Econtrol Econtrol (.OpCode(E_OpCode), .Funct(E_Funct), .ALUSrc(E_ALUSrc), .start(E_start), .mffix(E_mffix), 
+                       .ALUctr(E_ALUctr), .rsTuse(E_rsTuse), .rtTuse(E_rtTuse), .Tnew(E_Tnew));
+    ALU ALU (.inputA(E_inputA), .inputB(E_inputB), .type(E_ALUctr), .outputA(E_ALUoutputA));
+    MDU MDU (.clk(clk), .reset(reset), .inputA(E_inputA), .inputB(E_inputB), .type(E_ALUctr), .start(E_start), 
+             .outputA(E_MDUoutputA), .busy(E_busy));
              
-    EMreg EMreg (.clk(clk), .en(EM_en), .reset(reset), .E_outputA(E_outputA), 
+    EMreg EMreg (.clk(clk), .en(EM_en), .reset(reset), .E_outputA(E_fixedoutputA), 
                  .E_fixedRD2(E_fixedRD2), .E_A3(E_A3), .E_PCplus8(E_PCplus8), 
                  .E_pc(E_pc), .M_outputA(M_outputA), .M_RD2(M_RD2), .M_A3(M_A3), 
                  .M_PCplus8(M_PCplus8), .M_pc(M_pc), .E_Instr(E_Instr), .M_Instr(M_Instr), 
@@ -266,11 +287,13 @@ module mips(
                  .E_temp32(E_temp32), .E_temp5(E_temp5), .E_temp1(E_temp1), .M_temp32(M_temp32), .M_temp5(M_temp5), .M_temp1(M_temp1));
 
     // M zone ////////////////////////////////
-    Mcontrol Mcontrol (.OpCode(M_OpCode), .Funct(M_Funct), .MemWrite(M_MemWrite), .ALUctr(M_ALUctr), 
+    Mcontrol Mcontrol (.OpCode(M_OpCode), .Funct(M_Funct), .ALUctr(M_ALUctr), 
                        .rsTuse(M_rsTuse), .rtTuse(M_rtTuse), .Tnew(M_Tnew));
-    DM DM (.clk(clk), .reset(reset), .WE(M_MemWrite), .addr(M_outputA), .WD(M_fixedRD2),
-           .PC(M_pc), .data(M_data));
-           
+    // DM DM (.clk(clk), .reset(reset), .WE(M_MemWrite), .addr(M_outputA), .WD(M_fixedRD2),
+           // .PC(M_pc), .data(M_data));
+    BE BE (.addr(M_outputA), .data(M_fixedRD2), .type(M_ALUctr), .byteen(m_data_byteen), .fixed_data(m_data_wdata));
+    DE DE (.addr(M_outputA), .data(m_data_rdata), .type(M_ALUctr), .fixed_data(M_data));
+    
     MWreg MWreg (.clk(clk), .en(MW_en), .reset(reset), .M_outputA(M_outputA), .M_data(M_data), 
                  .M_A3(M_A3), .M_PCplus8(M_PCplus8), .M_pc(M_pc), .M_Instr(M_Instr), 
                  .W_outputA(W_outputA), .W_data(W_data), .W_A3(W_A3), .W_PCplus8(W_PCplus8), 
@@ -288,6 +311,9 @@ module mips(
     
     assign pc_en = (D_stall) ? 1'b0 : 1'b1;
     assign F_fixedInstr = (D_flush & (~D_stall)) ? 32'h00000000 : F_Instr;
+    
+    assign i_inst_addr = F_pc;
+    assign F_Instr = i_inst_rdata;
     
     // D zone ////////////////////////////////
     assign D_OpCode = D_Instr[31:26];
@@ -328,6 +354,7 @@ module mips(
     
     assign E_inputA = E_fixedRD1;
     assign E_inputB = (E_ALUSrc) ? E_ext32 : E_fixedRD2;
+    assign E_fixedoutputA = (E_mffix) ? E_MDUoutputA : E_ALUoutputA;
     
     assign E_fixedRD1 = (E_RD1_from_M) ? M_outputA :
                         (E_RD1_from_M_PCplus8) ? M_PCplus8 : 
@@ -353,6 +380,10 @@ module mips(
 
     assign EM_en = 1'b1;
     assign EM_clear = 1'b0;
+    // DM DM (.clk(clk), .reset(reset), .WE(M_MemWrite), .addr(M_outputA), .WD(M_fixedRD2),
+           // .PC(M_pc), .data(M_data));
+    assign m_data_addr = M_outputA;
+    assign m_inst_addr = M_pc;
     
     // W zone ////////////////////////////////
     assign W_OpCode = W_Instr[31:26];
@@ -369,6 +400,11 @@ module mips(
 
     assign MW_en = 1'b1;
     assign MW_clear = 1'b0;
+    
+    assign w_grf_we = W_RegWrite;
+    assign w_grf_addr = W_A3;
+    assign w_grf_wdata = W_WD;
+    assign w_inst_addr = W_pc;
 
     // forward ///////////////////////////////
     assign E_isPCplus8 = (E_ALUctr == 5'b00111);
@@ -396,12 +432,16 @@ module mips(
     assign M_RD2_from_W = (W_A3 != 5'b00000 && M_rt == W_A3 && M_rtTuse != 4'hf && W_Tnew != 4'hf && M_rtTuse >= W_Tnew) ? 1'b1 : 1'b0;
     
     // stall /////////////////////////////////
+    assign D_ismult = (D_ALUctr == 5'b10101 || D_ALUctr == 5'b10110 || D_ALUctr == 5'b10111 || D_ALUctr == 5'b11000 || 
+                       D_ALUctr == 5'b11001 || D_ALUctr == 5'b11010 || D_ALUctr == 5'b11011 || D_ALUctr == 5'b11100) ? 1'b1 : 1'b0;
+    
     assign D_stall = (E_A3 != 5'b00000 && D_rs == E_A3 && D_rsTuse != 4'hf && E_Tnew != 4'hf && D_rsTuse < E_Tnew) ? 1'b1 :
                      (E_A3 != 5'b00000 && D_rt == E_A3 && D_rtTuse != 4'hf && E_Tnew != 4'hf && D_rtTuse < E_Tnew) ? 1'b1 :
                      (M_A3 != 5'b00000 && D_rs == M_A3 && D_rsTuse != 4'hf && M_Tnew != 4'hf && D_rsTuse < M_Tnew) ? 1'b1 :
                      (M_A3 != 5'b00000 && D_rt == M_A3 && D_rtTuse != 4'hf && M_Tnew != 4'hf && D_rtTuse < M_Tnew) ? 1'b1 :
                      (W_A3 != 5'b00000 && D_rs == W_A3 && D_rsTuse != 4'hf && W_Tnew != 4'hf && D_rsTuse < W_Tnew) ? 1'b1 :
-                     (W_A3 != 5'b00000 && D_rt == W_A3 && D_rtTuse != 4'hf && W_Tnew != 4'hf && D_rtTuse < W_Tnew) ? 1'b1 : 1'b0;
+                     (W_A3 != 5'b00000 && D_rt == W_A3 && D_rtTuse != 4'hf && W_Tnew != 4'hf && D_rtTuse < W_Tnew) ? 1'b1 : 
+                     (D_ismult && (E_start || E_busy)) ? 1'b1 : 1'b0;
 
     
 endmodule
